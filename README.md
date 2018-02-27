@@ -1,4 +1,4 @@
-# cryptoBench
+# crypto-bench
 
 ```
 xxHash wasm x 22,565 ops/sec ±2.27% (83 runs sampled)
