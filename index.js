@@ -126,7 +126,7 @@ async function foo() {
     })
     .add('chloride blake2 aka generichash', () => {
       const myBuffer = Buffer.from(myString, 'utf8');
-      const hash = chloride.crypto_generichash(myBuffer).toString('base64');
+      const hash = chloride.crypto_generichash(myBuffer, 32).toString('base64');
       // console.log('Hash', hash);
     })
     .add('native chloride ed25519 sign', () => {
