@@ -7,10 +7,12 @@ const chloride = require('chloride');
 const crypto = require('crypto');
 const constants = require('./constants');
 const ed25519 = require('ed25519');
+const forge = require('node-forge');
 const jsonld = require('jsonld');
 const sampleData = require('./sample-data');
 const nacl = require('tweetnacl');
 // const uuid = require('uuid/v4');
+const {rsa} = forge.pki;
 const xxhash = require('xxhash-wasm');
 const Benchmark = require('benchmark');
 const XXHash = require('xxhash');
@@ -18,6 +20,7 @@ const XXHash = require('xxhash');
 const suite = new Benchmark.Suite();
 
 const chlorideKeypair = chloride.crypto_sign_keypair();
+const forgeKeypair = rsa.generateKeyPair({bits: 2048, e: 0x10001});
 const naclKeypair = nacl.sign.keyPair();
 const nativeEd25519KeyPair = {
   publicKey: bs58.decode('GycSSui454dpYRKiFdsQ5uaE8Gy3ac6dSMPcAoQsk8yq'),
@@ -54,24 +57,29 @@ async function foo() {
   //   // console.log('nan', b);
   //   assert.equal(a, b);
   // }
+  let digest;
   let signature;
   const myString = doc;
   const myBuffer = new Buffer(myString, 'utf8');
   const myU8Array = new Uint8Array(myBuffer);
-  // console.log('SAMPLEHASH', XXHash.hash(new Buffer(myString), 0xCAFEBABE).toString(16));
-  // console.log('SAMPLEHASH ni:///sha-256;EcN_iSKu3tb5Zp5j7pZjPEvmcZCgNrwrK-em869eh00', XXHash.hash(new Buffer('ni:///sha-256;EcN_iSKu3tb5Zp5j7pZjPEvmcZCgNrwrK-em869eh00'), 0xCAFEBABE));
+
   suite
     .add('xxHash wasm', () => wasmHasher.h32(myString, 0xCAFEBABE))
     .add('xxHash nan', () => XXHash.hash(new Buffer(myString), 0xCAFEBABE))
-    .add('crypto sha1', () => {
+    .add('node crypto sha1', () => {
       const md = crypto.createHash('sha1');
       md.update(myString, 'utf8');
       return md.digest('hex');
     })
-    .add('crypto sha256', () => {
+    .add('node crypto sha256', () => {
       const md = crypto.createHash('sha256');
       md.update(myString, 'utf8');
       return md.digest('hex');
+    })
+    .add('forge sha256', () => {
+      const md = forge.md.sha256.create();
+      md.update(myString);
+      return md.digest().toHex();
     })
     .add('blake2', () => {
       const md = blake2.createHash('blake2b', {digestLength: 32});
@@ -86,6 +94,17 @@ async function foo() {
     .add('chloride verify', () => {
       const verified = chloride.crypto_sign_verify_detached(
         new Buffer(signature, 'base64'), myBuffer, chlorideKeypair.publicKey);
+      // console.log('Verified', verified);
+    })
+    .add('forge RSA 2048 sign', () => {
+      digest = forge.md.sha256.create();
+      digest.update(myString, 'utf8');
+      signature = forgeKeypair.privateKey.sign(digest);
+      // console.log('Signature', signature);
+    })
+    .add('forge RSA 2048 verify', () => {
+      const verified = forgeKeypair.publicKey.verify(
+        digest.digest().bytes(), signature);
       // console.log('Verified', verified);
     })
     .add('tweetnacl sign', () => {
