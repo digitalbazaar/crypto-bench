@@ -91,7 +91,7 @@ async function foo() {
   // for(let i = 0; i < 100000; ++i) {
   //   const myString = uuid();
   //   const a = parseInt(wasmHasher.h32('abccde', 0xCAFEBABE), 16);
-  //   const b = XXHash.hash(new Buffer('abccde'), 0xCAFEBABE);
+  //   const b = XXHash.hash(Buffer.from('abccde'), 0xCAFEBABE);
   //   // console.log('wasm', a);
   //   // console.log('nan', b);
   //   assert.equal(a, b);
@@ -99,12 +99,11 @@ async function foo() {
   let digest;
   let signature;
   const myString = doc;
-  const myBuffer = new Buffer(myString, 'utf8');
-  const myU8Array = new Uint8Array(myBuffer);
+  const myBuffer = Buffer.from(myString, 'utf8');
 
   suite
     .add('xxHash wasm', () => wasmHasher.h32(myString, 0xCAFEBABE))
-    .add('xxHash nan', () => XXHash.hash(new Buffer(myString), 0xCAFEBABE))
+    .add('xxHash nan', () => XXHash.hash(Buffer.from(myString), 0xCAFEBABE))
     .add('node crypto sha1', () => {
       const md = crypto.createHash('sha1');
       md.update(myString, 'utf8');
@@ -122,17 +121,26 @@ async function foo() {
     })
     .add('blake2', () => {
       const md = blake2.createHash('blake2b', {digestLength: 32});
-      md.update(new Buffer(myString, 'utf8'));
+      md.update(Buffer.from(myString, 'utf8'));
       return md.digest('base64');
     })
     .add('chloride sign', () => {
+      const md = crypto.createHash('sha256');
+      md.update(myString, 'utf8');
+      const sha256Hash = md.digest('hex');
+      const myHashBuffer = Buffer.from(sha256Hash);
       signature = chloride.crypto_sign_detached(
-        myBuffer, chlorideKeypair.secretKey).toString('base64');
+        myHashBuffer, chlorideKeypair.secretKey).toString('base64');
       // console.log('Signature', signature);
     })
     .add('chloride verify', () => {
+      const md = crypto.createHash('sha256');
+      md.update(myString, 'utf8');
+      const sha256Hash = md.digest('hex');
+      const myHashBuffer = Buffer.from(sha256Hash);
       const verified = chloride.crypto_sign_verify_detached(
-        new Buffer(signature, 'base64'), myBuffer, chlorideKeypair.publicKey);
+        Buffer.from(signature, 'base64'), myHashBuffer,
+        chlorideKeypair.publicKey);
       // console.log('Verified', verified);
     })
     .add('forge RSA 2048 sign', () => {
@@ -147,35 +155,55 @@ async function foo() {
       // console.log('Verified', verified);
     })
     .add('node crypto 2048 sign', () => {
-      const sign = crypto.createSign('SHA256');
-      sign.write(myString);
-      signature = sign.sign(nodeRsaKeyPair.privateKeyPem, 'base64');
+      const rsaSign = crypto.createSign('SHA256');
+      rsaSign.write(myString);
+      signature = rsaSign.sign(nodeRsaKeyPair.privateKeyPem, 'base64');
       // console.log('Signature', signature);
     })
     .add('node crypto 2048 verify', () => {
-      const verify = crypto.createVerify('SHA256');
-      verify.update(myString);
-      const verified = verify.verify(
+      const rsaVerify = crypto.createVerify('SHA256');
+      rsaVerify.update(myString);
+      const verified = rsaVerify.verify(
         nodeRsaKeyPair.publicKeyPem, signature, 'base64');
       // console.log('Verified', verified);
     })
     .add('tweetnacl sign', () => {
+      // tweetnacl hashing API only does SHA512 hashes
+      const md = forge.md.sha256.create();
+      md.update(myString);
+      const sha256Hash = md.digest().toHex();
+      const myHashBuffer = Buffer.from(sha256Hash);
+      const myU8Array = new Uint8Array(myHashBuffer);
       signature = nacl.sign.detached(myU8Array, naclKeypair.secretKey);
-      // console.log('Signature', new Buffer(signature).toString('base64'));
+      // console.log('Signature', Buffer.from(signature).toString('base64'));
     })
     .add('tweetnacl verify', () => {
+      // tweetnacl hashing API only does SHA512 hashes
+      const md = forge.md.sha256.create();
+      md.update(myString);
+      const sha256Hash = md.digest().toHex();
+      const myHashBuffer = Buffer.from(sha256Hash);
+      const myU8Array = new Uint8Array(myHashBuffer);
       const verified = nacl.sign.detached.verify(
         myU8Array, signature, naclKeypair.publicKey);
       // console.log('Verified', verified);
     })
     .add('native ed25519 sign', () => {
-      signature = ed25519.Sign(myBuffer, nativeEd25519KeyPair.privateKey)
+      const md = crypto.createHash('sha256');
+      md.update(myString, 'utf8');
+      const sha256Hash = md.digest('hex');
+      const myHashBuffer = Buffer.from(sha256Hash);
+      signature = ed25519.Sign(myHashBuffer, nativeEd25519KeyPair.privateKey)
         .toString('base64');
       // console.log('Signature', signature);
     })
     .add('native ed25519 verify', () => {
+      const md = crypto.createHash('sha256');
+      md.update(myString, 'utf8');
+      const sha256Hash = md.digest('hex');
+      const myHashBuffer = Buffer.from(sha256Hash);
       const verified = ed25519.Verify(
-        myBuffer, new Buffer(signature, 'base64'),
+        myHashBuffer, Buffer.from(signature, 'base64'),
         nativeEd25519KeyPair.publicKey);
       // console.log('Verified', verified);
     })
