@@ -13,7 +13,7 @@
     "benchmark": "^2.1.4",
     "blake2": "^1.4.0",
     "bs58": "^4.0.1",
-    "chloride": "^2.2.8",
+    "chloride": "digitalbazaar/chloride#genericHash",
     "ed25519": "0.0.4",
     "jsonld": "^0.5.20",
     "node-forge": "^0.7.1",

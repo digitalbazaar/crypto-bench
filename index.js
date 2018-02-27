@@ -119,8 +119,15 @@ async function foo() {
     })
     .add('blake2', () => {
       const md = blake2.createHash('blake2b', {digestLength: 32});
-      md.update(Buffer.from(myString, 'utf8'));
-      return md.digest('base64');
+      const myBuffer = Buffer.from(myString, 'utf8');
+      md.update(myBuffer);
+      const hash = md.digest('base64');
+      // console.log('Hash', hash);
+    })
+    .add('chloride blake2 aka generichash', () => {
+      const myBuffer = Buffer.from(myString, 'utf8');
+      const hash = chloride.crypto_generichash(myBuffer).toString('base64');
+      // console.log('Hash', hash);
     })
     .add('native chloride ed25519 sign', () => {
       const myBuffer = Buffer.from(myString, 'utf8');
