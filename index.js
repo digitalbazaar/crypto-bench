@@ -1,7 +1,5 @@
 'use strict';
 
-// const assert = require('assert');
-const blake2 = require('blake2');
 const bs58 = require('bs58');
 const chloride = require('chloride');
 const crypto = require('crypto');
@@ -11,7 +9,6 @@ const forge = require('node-forge');
 const jsonld = require('jsonld');
 const sampleData = require('./sample-data');
 const nacl = require('tweetnacl');
-// const uuid = require('uuid/v4');
 const {rsa} = forge.pki;
 const xxhash = require('xxhash-wasm');
 const Benchmark = require('benchmark');
@@ -87,15 +84,7 @@ async function foo() {
     algorithm: 'URDNA2015',
     format: 'application/n-quads'
   });
-  // console.log('DDDDDDD', doc);
-  // for(let i = 0; i < 100000; ++i) {
-  //   const myString = uuid();
-  //   const a = parseInt(wasmHasher.h32('abccde', 0xCAFEBABE), 16);
-  //   const b = XXHash.hash(Buffer.from('abccde'), 0xCAFEBABE);
-  //   // console.log('wasm', a);
-  //   // console.log('nan', b);
-  //   assert.equal(a, b);
-  // }
+
   let signature;
   const myString = doc;
 
@@ -112,22 +101,27 @@ async function foo() {
       md.update(myString, 'utf8');
       return md.digest('hex');
     })
+    .add('node 10.x crypto blake2b512', () => {
+      const md = crypto.createHash('blake2b512');
+      md.update(myString, 'utf8');
+      const hash = md.digest('base64');
+      return hash;
+    })
     .add('forge sha256', () => {
       const md = forge.md.sha256.create();
       md.update(myString);
       return md.digest().toHex();
     })
-    .add('blake2', () => {
-      const md = blake2.createHash('blake2b', {digestLength: 32});
+    .add('chloride sha256', () => {
       const myBuffer = Buffer.from(myString, 'utf8');
-      md.update(myBuffer);
-      const hash = md.digest('base64');
-      // console.log('Hash', hash);
+      const hash = chloride.crypto_hash_sha256(myBuffer).toString('hex');
+      return hash;
     })
     .add('chloride blake2 aka generichash', () => {
       const myBuffer = Buffer.from(myString, 'utf8');
-      const hash = chloride.crypto_generichash(myBuffer, 32).toString('base64');
-      // console.log('Hash', hash);
+      // using 64 byte output for parity with OpenSSL `blake2b512`
+      const hash = chloride.crypto_generichash(myBuffer, 64).toString('base64');
+      return hash;
     })
     .add('native chloride ed25519 sign', () => {
       const myBuffer = Buffer.from(myString, 'utf8');
@@ -140,7 +134,6 @@ async function foo() {
       const verified = chloride.crypto_sign_verify_detached(
         Buffer.from(signature, 'base64'), myBuffer,
         chlorideKeypair.publicKey);
-      // console.log('Verified', verified);
     })
     .add('forge RSA 2048 sign', () => {
       const md = forge.md.sha256.create();
@@ -214,6 +207,7 @@ async function foo() {
     .on('cycle', event => {
       console.log(String(event.target));
     })
+    // .on('error', console.error)
     // .on('complete', function() {
     //   console.log('Fastest is ' + this.filter('fastest').map('name'));
     // })
