@@ -16,6 +16,7 @@
     "ed25519": "0.0.4",
     "jsonld": "^0.5.20",
     "node-forge": "^0.7.1",
+    "sodium": "^3.0.1",
     "tweetnacl": "^1.0.0",
     "xxhash": "^0.2.4",
     "xxhash-wasm": "^0.3.1"
