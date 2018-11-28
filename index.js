@@ -11,6 +11,7 @@ const sampleData = require('./sample-data');
 const nacl = require('tweetnacl');
 const {rsa} = forge.pki;
 const {api: sodium} = require('sodium');
+const sodiumNative = require('sodium-native');
 const xxhash = require('xxhash-wasm');
 const Benchmark = require('benchmark');
 const XXHash = require('xxhash');
@@ -140,6 +141,13 @@ async function foo() {
         .toString('base64');
       return hash;
     })
+    .add('sodium-native blake2 aka generichash', () => {
+      const myBuffer = Buffer.from(myString, 'utf8');
+      // using 64 byte output for parity with OpenSSL `blake2b512`
+      const output = new Buffer(64);
+      sodiumNative.crypto_generichash(output, myBuffer);
+      return output.toString('base64');
+    })
     .add('native chloride ed25519 sign', () => {
       const myBuffer = Buffer.from(myString, 'utf8');
       signature = chloride.crypto_sign_detached(
@@ -152,6 +160,14 @@ async function foo() {
         myBuffer, chlorideKeypair.secretKey).toString('base64');
       // console.log('Signature B', signature);
     })
+    .add('native sodium-native ed25519 sign', () => {
+      const myBuffer = Buffer.from(myString, 'utf8');
+      const signature = new Buffer(sodiumNative.crypto_sign_BYTES);
+      sodiumNative.crypto_sign_detached(
+        signature, myBuffer, chlorideKeypair.secretKey);
+      // console.log('Signature C', signature.toString('base64'));
+      return signature.toString('base64');
+    })
     .add('native chloride ed25519 verify', () => {
       const myBuffer = Buffer.from(myString, 'utf8');
       const verified = chloride.crypto_sign_verify_detached(
@@ -161,6 +177,12 @@ async function foo() {
     .add('native sodium ed25519 verify', () => {
       const myBuffer = Buffer.from(myString, 'utf8');
       const verified = sodium.crypto_sign_verify_detached(
+        Buffer.from(signature, 'base64'), myBuffer,
+        chlorideKeypair.publicKey);
+    })
+    .add('native sodium-native ed25519 verify', () => {
+      const myBuffer = Buffer.from(myString, 'utf8');
+      const verified = sodiumNative.crypto_sign_verify_detached(
         Buffer.from(signature, 'base64'), myBuffer,
         chlorideKeypair.publicKey);
     })
