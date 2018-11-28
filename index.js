@@ -144,7 +144,7 @@ async function foo() {
     .add('sodium-native blake2 aka generichash', () => {
       const myBuffer = Buffer.from(myString, 'utf8');
       // using 64 byte output for parity with OpenSSL `blake2b512`
-      const output = new Buffer(64);
+      const output = Buffer.allocUnsafe(64);
       sodiumNative.crypto_generichash(output, myBuffer);
       return output.toString('base64');
     })
@@ -162,7 +162,7 @@ async function foo() {
     })
     .add('native sodium-native ed25519 sign', () => {
       const myBuffer = Buffer.from(myString, 'utf8');
-      const signature = new Buffer(sodiumNative.crypto_sign_BYTES);
+      const signature = Buffer.allocUnsafe(sodiumNative.crypto_sign_BYTES);
       sodiumNative.crypto_sign_detached(
         signature, myBuffer, chlorideKeypair.secretKey);
       // console.log('Signature C', signature.toString('base64'));
