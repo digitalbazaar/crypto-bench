@@ -75,6 +75,22 @@ const nodeRsaKeyPair = {
     '-----END RSA PRIVATE KEY-----\n'
 };
 
+const {generateKeyPairSync} = crypto;
+function nodeGenerateRsaNative() {
+  const k = generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    publicExponent: 0x10001,
+    publicKeyEncoding: {
+      type: 'spki',
+      format: 'pem'
+    },
+    privateKeyEncoding: {
+      type: 'pkcs8',
+      format: 'pem'
+    }
+  });
+};
+
 const nodeDocumentLoader = jsonld.documentLoaders.node();
 jsonld.documentLoader = (url, callback) => {
   if(url in constants.CONTEXTS) {
@@ -208,6 +224,9 @@ async function foo() {
       const verified = forgeKeypair.publicKey.verify(
         md.digest().bytes(), signature, pss);
       // console.log('Verified', verified);
+    })
+    .add('node cryto RSA generateKeySync', () => {
+      nodeGenerateRsaNative();
     })
     .add('node crypto 2048 sign', () => {
       const rsaSign = crypto.createSign('RSA-SHA256');
