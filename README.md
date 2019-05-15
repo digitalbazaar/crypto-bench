@@ -1,6 +1,8 @@
 # crypto-bench
 
 ### Node.js 12.2.0 Intel(R) Core(TM) i7-3610QM CPU @ 2.30GHz
+As of 20190515 `sodium-native` will not build with Node 12.
+see: https://github.com/sodium-friends/sodium-native/issues/95
 ```
 node crypto Ed25519 sign x 4,235 ops/sec ±2.44% (77 runs sampled)
 node crypto Ed25519 verify x 3,405 ops/sec ±1.97% (75 runs sampled)
