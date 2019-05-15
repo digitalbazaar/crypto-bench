@@ -1,28 +1,29 @@
 'use strict';
 
 const bs58 = require('bs58');
-const chloride = require('chloride');
+// const chloride = require('chloride');
 const crypto = require('crypto');
 const constants = require('./constants');
-const ed25519 = require('ed25519');
+// const ed25519 = require('ed25519');
 const forge = require('node-forge');
 const jsonld = require('jsonld');
 const sampleData = require('./sample-data');
 const nacl = require('tweetnacl');
 const {rsa} = forge.pki;
-const {api: sodium} = require('sodium');
-const sodiumNative = require('sodium-native');
-const xxhash = require('xxhash-wasm');
+// const {api: sodium} = require('sodium');
+// const sodiumNative = require('sodium-native');
+// const xxhash = require('xxhash-wasm');
 const Benchmark = require('benchmark');
-const XXHash = require('xxhash');
+// const XXHash = require('xxhash');
 
 const suite = new Benchmark.Suite();
 
-const blakeKey = generateKey(sodium.crypto_generichash_KEYBYTES);
+// const blakeKey = generateKey(sodium.crypto_generichash_KEYBYTES);
 
-const chlorideKeypair = chloride.crypto_sign_keypair();
+// const chlorideKeypair = chloride.crypto_sign_keypair();
 const forgeKeypair = rsa.generateKeyPair({bits: 2048, e: 0x10001});
 const naclKeypair = nacl.sign.keyPair();
+
 const nativeEd25519KeyPair = {
   publicKey: bs58.decode('GycSSui454dpYRKiFdsQ5uaE8Gy3ac6dSMPcAoQsk8yq'),
   privateKey: bs58.decode(
@@ -30,11 +31,7 @@ const nativeEd25519KeyPair = {
     'JKk6QErH3wgdHp8itkSSiF')
 };
 
-function generateKey(len) {
-  const key = Buffer.allocUnsafe(len);
-  sodium.randombytes_buf(key, len);
-  return key;
-}
+const nodeCryptoEd25519KeyPair = crypto.generateKeyPairSync('ed25519');
 
 const nodeRsaKeyPair = {
   publicKeyPem: '-----BEGIN PUBLIC KEY-----\n' +
@@ -89,7 +86,7 @@ function nodeGenerateRsaNative() {
       format: 'pem'
     }
   });
-};
+}
 
 const nodeDocumentLoader = jsonld.documentLoaders.node();
 jsonld.documentLoader = (url, callback) => {
@@ -105,7 +102,6 @@ jsonld.documentLoader = (url, callback) => {
 };
 
 async function foo() {
-  const wasmHasher = await xxhash();
   const doc = await jsonld.canonize(sampleData, {
     algorithm: 'URDNA2015',
     format: 'application/n-quads'
@@ -115,6 +111,7 @@ async function foo() {
   const myString = doc;
 
   suite
+  /*
     .add('xxHash wasm', () => wasmHasher.h32(myString, 0xCAFEBABE))
     .add('xxHash nan', () => XXHash.hash(Buffer.from(myString), 0xCAFEBABE))
     .add('node crypto sha1', () => {
@@ -248,6 +245,18 @@ async function foo() {
       }, signature, 'base64');
       // console.log('Verified', verified);
     })
+    */
+    .add('node crypto Ed25519 sign', () => {
+      signature = crypto.sign(
+        null, Buffer.from(myString, 'utf8'),
+        nodeCryptoEd25519KeyPair.privateKey);
+    })
+    .add('node crypto Ed25519 verify', () => {
+      const myBuffer = Buffer.from(myString, 'utf8');
+      const verified = crypto.verify(
+        null, myBuffer, nodeCryptoEd25519KeyPair.publicKey, signature);
+    })
+    /*
     .add('tweetnacl ed25519 sign', () => {
       const myBuffer = Buffer.from(myString, 'utf8');
       const myU8Array = new Uint8Array(myBuffer);
@@ -261,19 +270,7 @@ async function foo() {
         myU8Array, signature, naclKeypair.publicKey);
       // console.log('Verified', verified);
     })
-    .add('native ed25519 sign', () => {
-      const myBuffer = Buffer.from(myString, 'utf8');
-      signature = ed25519.Sign(myBuffer, nativeEd25519KeyPair.privateKey)
-        .toString('base64');
-      // console.log('Signature', signature);
-    })
-    .add('native ed25519 verify', () => {
-      const myBuffer = Buffer.from(myString, 'utf8');
-      const verified = ed25519.Verify(
-        myBuffer, Buffer.from(signature, 'base64'),
-        nativeEd25519KeyPair.publicKey);
-      // console.log('Verified', verified);
-    })
+    */
     .on('cycle', event => {
       console.log(String(event.target));
     })

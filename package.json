@@ -12,14 +12,12 @@
   "dependencies": {
     "benchmark": "^2.1.4",
     "bs58": "^4.0.1",
-    "chloride": "digitalbazaar/chloride#genericHash",
-    "ed25519": "0.0.4",
     "jsonld": "^1.6.1",
     "node-forge": "^0.7.1",
-    "sodium": "^3.0.1",
-    "sodium-native": "^2.2.3",
-    "tweetnacl": "^1.0.0",
-    "xxhash": "^0.2.4",
-    "xxhash-wasm": "^0.3.1"
+    "tweetnacl": "^1.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^5.16.0",
+    "eslint-config-digitalbazaar": "^2.0.0"
   }
 }

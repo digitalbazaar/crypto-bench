@@ -1,5 +1,11 @@
 # crypto-bench
 
+### Node.js 12.2.0 Intel(R) Core(TM) i7-3610QM CPU @ 2.30GHz
+```
+node crypto Ed25519 sign x 4,235 ops/sec ±2.44% (77 runs sampled)
+node crypto Ed25519 verify x 3,405 ops/sec ±1.97% (75 runs sampled)
+```
+
 ### Node.js 11.3.0 Intel(R) Core(TM) i7-3610QM CPU @ 2.30GHz
 ```
 xxHash wasm x 23,666 ops/sec ±1.67% (82 runs sampled)
