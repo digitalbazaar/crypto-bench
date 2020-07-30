@@ -1,40 +1,19 @@
 'use strict';
 
-const bs58 = require('bs58');
-const chloride = require('chloride');
 const crypto = require('crypto');
 const constants = require('./constants');
-const ed25519 = require('ed25519');
 const forge = require('node-forge');
 const jsonld = require('jsonld');
 const sampleData = require('./sample-data');
 const nacl = require('tweetnacl');
 const {rsa} = forge.pki;
-const {api: sodium} = require('sodium');
-const sodiumNative = require('sodium-native');
-const xxhash = require('xxhash-wasm');
+const sodium = require('sodium-native');
 const Benchmark = require('benchmark');
-const XXHash = require('xxhash');
 
 const suite = new Benchmark.Suite();
 
-const blakeKey = generateKey(sodium.crypto_generichash_KEYBYTES);
-
-const chlorideKeypair = chloride.crypto_sign_keypair();
 const forgeKeypair = rsa.generateKeyPair({bits: 2048, e: 0x10001});
 const naclKeypair = nacl.sign.keyPair();
-const nativeEd25519KeyPair = {
-  publicKey: bs58.decode('GycSSui454dpYRKiFdsQ5uaE8Gy3ac6dSMPcAoQsk8yq'),
-  privateKey: bs58.decode(
-    '3Mmk4UzTRJTEtxaKk61LxtgUxAa2Dg36jF6VogPtRiKvfpsQWKPCLesKSV182RMmvM' +
-    'JKk6QErH3wgdHp8itkSSiF')
-};
-
-function generateKey(len) {
-  const key = Buffer.allocUnsafe(len);
-  sodium.randombytes_buf(key, len);
-  return key;
-}
 
 const nodeRsaKeyPair = {
   publicKeyPem: '-----BEGIN PUBLIC KEY-----\n' +
@@ -89,7 +68,11 @@ function nodeGenerateRsaNative() {
       format: 'pem'
     }
   });
-};
+}
+
+const publicKey = new Buffer.alloc(sodium.crypto_sign_PUBLICKEYBYTES);
+const privateKey = new Buffer.alloc(sodium.crypto_sign_SECRETKEYBYTES);
+sodium.crypto_sign_keypair(publicKey, privateKey);
 
 const nodeDocumentLoader = jsonld.documentLoaders.node();
 jsonld.documentLoader = (url, callback) => {
@@ -105,7 +88,6 @@ jsonld.documentLoader = (url, callback) => {
 };
 
 async function foo() {
-  const wasmHasher = await xxhash();
   const doc = await jsonld.canonize(sampleData, {
     algorithm: 'URDNA2015',
     format: 'application/n-quads'
@@ -115,8 +97,6 @@ async function foo() {
   const myString = doc;
 
   suite
-    .add('xxHash wasm', () => wasmHasher.h32(myString, 0xCAFEBABE))
-    .add('xxHash nan', () => XXHash.hash(Buffer.from(myString), 0xCAFEBABE))
     .add('node crypto sha1', () => {
       const md = crypto.createHash('sha1');
       md.update(myString, 'utf8');
@@ -138,69 +118,24 @@ async function foo() {
       md.update(myString);
       return md.digest().toHex();
     })
-    .add('chloride sha256', () => {
-      const myBuffer = Buffer.from(myString, 'utf8');
-      const hash = chloride.crypto_hash_sha256(myBuffer).toString('hex');
-      return hash;
-    })
-    .add('chloride blake2 aka generichash', () => {
-      const myBuffer = Buffer.from(myString, 'utf8');
-      // using 64 byte output for parity with OpenSSL `blake2b512`
-      const hash = chloride.crypto_generichash(myBuffer, 64).toString('base64');
-      return hash;
-    })
-    .add('sodium blake2 aka generichash', () => {
-      const myBuffer = Buffer.from(myString, 'utf8');
-      // using 64 byte output for parity with OpenSSL `blake2b512`
-      // sodium.crypto_generichash_BYTES === 32
-      const hash = sodium.crypto_generichash(64, myBuffer, blakeKey)
-        .toString('base64');
-      return hash;
-    })
     .add('sodium-native blake2 aka generichash', () => {
       const myBuffer = Buffer.from(myString, 'utf8');
       // using 64 byte output for parity with OpenSSL `blake2b512`
       const output = Buffer.allocUnsafe(64);
-      sodiumNative.crypto_generichash(output, myBuffer);
+      sodium.crypto_generichash(output, myBuffer);
       return output.toString('base64');
-    })
-    .add('native chloride ed25519 sign', () => {
-      const myBuffer = Buffer.from(myString, 'utf8');
-      signature = chloride.crypto_sign_detached(
-        myBuffer, chlorideKeypair.secretKey).toString('base64');
-      // console.log('Signature A', signature);
-    })
-    .add('native sodium ed25519 sign', () => {
-      const myBuffer = Buffer.from(myString, 'utf8');
-      signature = sodium.crypto_sign_detached(
-        myBuffer, chlorideKeypair.secretKey).toString('base64');
-      // console.log('Signature B', signature);
     })
     .add('native sodium-native ed25519 sign', () => {
       const myBuffer = Buffer.from(myString, 'utf8');
-      const signature = Buffer.allocUnsafe(sodiumNative.crypto_sign_BYTES);
-      sodiumNative.crypto_sign_detached(
-        signature, myBuffer, chlorideKeypair.secretKey);
+      signature = Buffer.allocUnsafe(sodium.crypto_sign_BYTES);
+      sodium.crypto_sign_detached(signature, myBuffer, privateKey);
       // console.log('Signature C', signature.toString('base64'));
       return signature.toString('base64');
     })
-    .add('native chloride ed25519 verify', () => {
-      const myBuffer = Buffer.from(myString, 'utf8');
-      const verified = chloride.crypto_sign_verify_detached(
-        Buffer.from(signature, 'base64'), myBuffer,
-        chlorideKeypair.publicKey);
-    })
-    .add('native sodium ed25519 verify', () => {
-      const myBuffer = Buffer.from(myString, 'utf8');
-      const verified = sodium.crypto_sign_verify_detached(
-        Buffer.from(signature, 'base64'), myBuffer,
-        chlorideKeypair.publicKey);
-    })
     .add('native sodium-native ed25519 verify', () => {
       const myBuffer = Buffer.from(myString, 'utf8');
-      const verified = sodiumNative.crypto_sign_verify_detached(
-        Buffer.from(signature, 'base64'), myBuffer,
-        chlorideKeypair.publicKey);
+      const verified = sodium.crypto_sign_verify_detached(
+        Buffer.from(signature, 'base64'), myBuffer, publicKey);
     })
     .add('forge RSA 2048 sign', () => {
       const md = forge.md.sha256.create();
@@ -259,19 +194,6 @@ async function foo() {
       const myU8Array = new Uint8Array(myBuffer);
       const verified = nacl.sign.detached.verify(
         myU8Array, signature, naclKeypair.publicKey);
-      // console.log('Verified', verified);
-    })
-    .add('native ed25519 sign', () => {
-      const myBuffer = Buffer.from(myString, 'utf8');
-      signature = ed25519.Sign(myBuffer, nativeEd25519KeyPair.privateKey)
-        .toString('base64');
-      // console.log('Signature', signature);
-    })
-    .add('native ed25519 verify', () => {
-      const myBuffer = Buffer.from(myString, 'utf8');
-      const verified = ed25519.Verify(
-        myBuffer, Buffer.from(signature, 'base64'),
-        nativeEd25519KeyPair.publicKey);
       // console.log('Verified', verified);
     })
     .on('cycle', event => {
