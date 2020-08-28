@@ -1,5 +1,23 @@
 # crypto-bench
 
+### Node.js 14..9.0 AMD Ryzen 5 with `sha_ni` capability
+```
+node crypto sha1 x 64,870 ops/sec ±0.95% (91 runs sampled)
+node crypto sha256 x 61,020 ops/sec ±1.26% (94 runs sampled)
+node 10.x+ crypto blake2b512 x 33,201 ops/sec ±0.48% (95 runs sampled)
+forge sha256 x 1,896 ops/sec ±8.28% (70 runs sampled)
+sodium-native blake2 aka generichash x 25,058 ops/sec ±0.77% (91 runs sampled)
+native sodium-native ed25519 sign x 6,679 ops/sec ±0.81% (93 runs sampled)
+native sodium-native ed25519 verify x 7,657 ops/sec ±1.15% (93 runs sampled)
+forge RSA 2048 sign x 42.75 ops/sec ±1.14% (57 runs sampled)
+forge RSA 2048 verify x 837 ops/sec ±0.64% (93 runs sampled)
+node cryto RSA generateKeySync x 15.03 ops/sec ±14.35% (25 runs sampled)
+node crypto 2048 sign x 1,089 ops/sec ±1.11% (94 runs sampled)
+node crypto 2048 verify x 20,198 ops/sec ±0.99% (89 runs sampled)
+tweetnacl ed25519 sign x 212 ops/sec ±4.11% (64 runs sampled)
+tweetnacl ed25519 verify x 79.53 ops/sec ±2.78% (52 runs sampled)
+```
+
 ### Node.js 11.3.0 Intel(R) Core(TM) i7-3610QM CPU @ 2.30GHz
 ```
 xxHash wasm x 23,666 ops/sec ±1.67% (82 runs sampled)
