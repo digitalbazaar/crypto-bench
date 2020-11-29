@@ -10,6 +10,7 @@ const {rsa} = forge.pki;
 const sodium = require('sodium-native');
 const Benchmark = require('benchmark');
 const stableEd25519 = require('@stablelib/ed25519');
+const wasmEd25519 = require('../../rust/ed25519/pkg/ed25519.js');
 
 const suite = new Benchmark.Suite();
 
@@ -227,6 +228,13 @@ async function foo() {
     .add('sodium-native ed25519 verify', () => {
       const verified = sodium.crypto_sign_verify_detached(
         Buffer.from(signature, 'base64'), myStringBuffer, publicKey);
+      if(!verified) {
+        throw new Error('Verification failed.');
+      }
+    })
+    .add('WASM ed25519 ed25519 verify', () => {
+      const verified = wasmEd25519.verify(
+        ed25519PublicKeyUint8, myStringUint8, ed25519SignatureUint8);
       if(!verified) {
         throw new Error('Verification failed.');
       }
