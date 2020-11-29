@@ -114,17 +114,17 @@ async function foo() {
   let rsaSignature;
 
   suite
-    .add('node crypto sha1', () => {
+    .add('Node.js crypto sha1', () => {
       const md = crypto.createHash('sha1');
       md.update(myString, 'utf8');
       return md.digest('hex');
     })
-    .add('node crypto sha256', () => {
+    .add('Node.js crypto sha256', () => {
       const md = crypto.createHash('sha256');
       md.update(myString, 'utf8');
       return md.digest('hex');
     })
-    .add('node 10.x+ crypto blake2b512', () => {
+    .add('Node.js crypto 10.x+ blake2b512', () => {
       const md = crypto.createHash('blake2b512');
       md.update(myString, 'utf8');
       const hash = md.digest('base64');
@@ -166,10 +166,10 @@ async function foo() {
         throw new Error('Verification failed.');
       }
     })
-    .add('node cryto RSA generateKeySync', () => {
+    .add('Node.js crypto RSA generateKeySync', () => {
       nodeGenerateRsaNative();
     })
-    .add('node crypto 2048 sign', () => {
+    .add('Node.js crypto 2048 sign', () => {
       const rsaSign = crypto.createSign('RSA-SHA256');
       rsaSign.update(myString);
       rsaSignature = rsaSign.sign({
@@ -179,7 +179,7 @@ async function foo() {
       }, 'base64');
       // console.log('Signature', signature);
     })
-    .add('node crypto 2048 verify', () => {
+    .add('Node.js crypto 2048 verify', () => {
       const rsaVerify = crypto.createVerify('RSA-SHA256');
       rsaVerify.update(myString);
       const verified = rsaVerify.verify({
@@ -212,7 +212,7 @@ async function foo() {
         throw new Error('Verification failed.');
       }
     })
-    .add('Node.js ed25519 verify', () => {
+    .add('Node.js crypto ed25519 verify', () => {
       const verified = verify(
         null, myStringBuffer, nodejsEd25519PublicKey, signature);
       if(!verified) {
