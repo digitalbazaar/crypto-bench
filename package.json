@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@stablelib/ed25519": "^1.0.1",
     "benchmark": "^2.1.4",
     "jsonld": "^1.6.1",
     "node-forge": "^0.10.0",
