@@ -141,19 +141,6 @@ async function foo() {
       sodium.crypto_generichash(output, myStringBuffer);
       return output.toString('base64');
     })
-    .add('native sodium-native ed25519 sign', () => {
-      const signature = Buffer.allocUnsafe(sodium.crypto_sign_BYTES);
-      sodium.crypto_sign_detached(signature, myStringBuffer, privateKey);
-      // console.log('Signature C', signature.toString('base64'));
-      return signature.toString('base64');
-    })
-    .add('native sodium-native ed25519 verify', () => {
-      const verified = sodium.crypto_sign_verify_detached(
-        Buffer.from(signature, 'base64'), myStringBuffer, publicKey);
-      if(!verified) {
-        throw new Error('Verification failed.');
-      }
-    })
     .add('forge RSA 2048 sign', () => {
       const md = forge.md.sha256.create();
       const pss = forge.pss.create({
@@ -228,6 +215,18 @@ async function foo() {
     .add('Node.js ed25519 verify', () => {
       const verified = verify(
         null, myStringBuffer, nodejsEd25519PublicKey, signature);
+      if(!verified) {
+        throw new Error('Verification failed.');
+      }
+    })
+    .add('sodium-native ed25519 sign', () => {
+      const signature = Buffer.allocUnsafe(sodium.crypto_sign_BYTES);
+      sodium.crypto_sign_detached(signature, myStringBuffer, privateKey);
+      return signature.toString('base64');
+    })
+    .add('sodium-native ed25519 verify', () => {
+      const verified = sodium.crypto_sign_verify_detached(
+        Buffer.from(signature, 'base64'), myStringBuffer, publicKey);
       if(!verified) {
         throw new Error('Verification failed.');
       }
