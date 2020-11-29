@@ -1,21 +1,23 @@
 # crypto-bench
 
-### Node.js 14..9.0 AMD Ryzen 5 with `sha_ni` capability
+### Node.js 14..15.1 AMD Ryzen 5 3600 with `sha_ni` capability
 ```
-node crypto sha1 x 64,870 ops/sec ±0.95% (91 runs sampled)
-node crypto sha256 x 61,020 ops/sec ±1.26% (94 runs sampled)
-node 10.x+ crypto blake2b512 x 33,201 ops/sec ±0.48% (95 runs sampled)
-forge sha256 x 1,896 ops/sec ±8.28% (70 runs sampled)
-sodium-native blake2 aka generichash x 25,058 ops/sec ±0.77% (91 runs sampled)
-native sodium-native ed25519 sign x 6,679 ops/sec ±0.81% (93 runs sampled)
-native sodium-native ed25519 verify x 7,657 ops/sec ±1.15% (93 runs sampled)
-forge RSA 2048 sign x 42.75 ops/sec ±1.14% (57 runs sampled)
-forge RSA 2048 verify x 837 ops/sec ±0.64% (93 runs sampled)
-node cryto RSA generateKeySync x 15.03 ops/sec ±14.35% (25 runs sampled)
-node crypto 2048 sign x 1,089 ops/sec ±1.11% (94 runs sampled)
-node crypto 2048 verify x 20,198 ops/sec ±0.99% (89 runs sampled)
-tweetnacl ed25519 sign x 212 ops/sec ±4.11% (64 runs sampled)
-tweetnacl ed25519 verify x 79.53 ops/sec ±2.78% (52 runs sampled)
+Node.js crypto sha1 x 64,686 ops/sec ±1.15% (95 runs sampled)
+Node.js crypto sha256 x 60,490 ops/sec ±1.80% (93 runs sampled)
+Node.js crypto 10.x+ blake2b512 x 33,559 ops/sec ±0.33% (98 runs sampled)
+forge sha256 x 1,931 ops/sec ±8.23% (68 runs sampled)
+sodium-native blake2 aka generichash x 40,047 ops/sec ±0.24% (96 runs sampled)
+forge RSA 2048 sign x 48.10 ops/sec ±1.43% (64 runs sampled)
+forge RSA 2048 verify x 869 ops/sec ±0.27% (95 runs sampled)
+Node.js crypto RSA generateKeySync x 15.82 ops/sec ±15.97% (29 runs sampled)
+Node.js crypto 2048 sign x 1,128 ops/sec ±0.27% (97 runs sampled)
+Node.js crypto 2048 verify x 20,992 ops/sec ±0.67% (92 runs sampled)
+tweetnacl ed25519 sign x 185 ops/sec ±3.91% (59 runs sampled)
+tweetnacl ed25519 verify x 87.82 ops/sec ±4.02% (57 runs sampled)
+@stablelib/ed25519 ed25519 verify x 89.19 ops/sec ±3.92% (44 runs sampled)
+Node.js crypto ed25519 verify x 7,719 ops/sec ±0.20% (97 runs sampled)
+sodium-native ed25519 sign x 7,654 ops/sec ±0.60% (97 runs sampled)
+sodium-native ed25519 verify x 9,164 ops/sec ±0.37% (96 runs sampled)
 ```
 
 ### Node.js 11.3.0 Intel(R) Core(TM) i7-3610QM CPU @ 2.30GHz
