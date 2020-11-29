@@ -75,6 +75,8 @@ function nodeGenerateRsaNative() {
 const publicKey = new Buffer.alloc(sodium.crypto_sign_PUBLICKEYBYTES);
 const privateKey = new Buffer.alloc(sodium.crypto_sign_SECRETKEYBYTES);
 sodium.crypto_sign_keypair(publicKey, privateKey);
+const ed25519PublicKeyUint8 = Uint8Array.from(publicKey);
+// const ed25519PrivateKeyUint8 = Uint8Array.from(privateKey);
 
 const nodeDocumentLoader = jsonld.documentLoaders.node();
 jsonld.documentLoader = (url, callback) => {
@@ -95,11 +97,17 @@ async function foo() {
     format: 'application/n-quads'
   });
 
-  let signature;
   const myString = doc;
 
   const encoder = new TextEncoder();
   const myStringUint8 = encoder.encode(myString);
+  const myStringBuffer = Buffer.from(myStringUint8);
+
+  const signature = Buffer.alloc(sodium.crypto_sign_BYTES);
+  sodium.crypto_sign_detached(signature, myStringBuffer, privateKey);
+  const ed25519SignatureUint8 = Uint8Array.from(signature);
+
+  let rsaSignature;
 
   suite
     .add('node crypto sha1', () => {
@@ -124,23 +132,20 @@ async function foo() {
       return md.digest().toHex();
     })
     .add('sodium-native blake2 aka generichash', () => {
-      const myBuffer = Buffer.from(myString, 'utf8');
       // using 64 byte output for parity with OpenSSL `blake2b512`
       const output = Buffer.allocUnsafe(64);
-      sodium.crypto_generichash(output, myBuffer);
+      sodium.crypto_generichash(output, myStringBuffer);
       return output.toString('base64');
     })
     .add('native sodium-native ed25519 sign', () => {
-      const myBuffer = Buffer.from(myString, 'utf8');
-      signature = Buffer.allocUnsafe(sodium.crypto_sign_BYTES);
-      sodium.crypto_sign_detached(signature, myBuffer, privateKey);
+      const signature = Buffer.allocUnsafe(sodium.crypto_sign_BYTES);
+      sodium.crypto_sign_detached(signature, myStringBuffer, privateKey);
       // console.log('Signature C', signature.toString('base64'));
       return signature.toString('base64');
     })
     .add('native sodium-native ed25519 verify', () => {
-      const myBuffer = Buffer.from(myString, 'utf8');
       const verified = sodium.crypto_sign_verify_detached(
-        Buffer.from(signature, 'base64'), myBuffer, publicKey);
+        Buffer.from(signature, 'base64'), myStringBuffer, publicKey);
       if(!verified) {
         throw new Error('Verification failed.');
       }
@@ -153,7 +158,7 @@ async function foo() {
         saltLength: md.digestLength
       });
       md.update(myString, 'utf8');
-      signature = forgeKeypair.privateKey.sign(md, pss);
+      rsaSignature = forgeKeypair.privateKey.sign(md, pss);
       // console.log('Signature', signature);
     })
     .add('forge RSA 2048 verify', () => {
@@ -165,7 +170,7 @@ async function foo() {
       });
       md.update(myString, 'utf8');
       const verified = forgeKeypair.publicKey.verify(
-        md.digest().bytes(), signature, pss);
+        md.digest().bytes(), rsaSignature, pss);
       if(!verified) {
         throw new Error('Verification failed.');
       }
@@ -176,7 +181,7 @@ async function foo() {
     .add('node crypto 2048 sign', () => {
       const rsaSign = crypto.createSign('RSA-SHA256');
       rsaSign.update(myString);
-      signature = rsaSign.sign({
+      rsaSignature = rsaSign.sign({
         key: nodeRsaKeyPair.privateKeyPem,
         padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
         saltLength: crypto.constants.RSA_PSS_SALTLEN_DIGEST
@@ -190,27 +195,28 @@ async function foo() {
         key: nodeRsaKeyPair.publicKeyPem,
         padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
         saltLength: crypto.constants.RSA_PSS_SALTLEN_DIGEST
-      }, signature, 'base64');
+      }, rsaSignature, 'base64');
       if(!verified) {
         throw new Error('Verification failed.');
       }
     })
     .add('tweetnacl ed25519 sign', () => {
-      const myBuffer = Buffer.from(myString, 'utf8');
-      const myU8Array = new Uint8Array(myBuffer);
-      signature = nacl.sign.detached(myU8Array, naclKeypair.secretKey);
-      // console.log('Signature', Buffer.from(signature).toString('base64'));
+      const signature = nacl.sign.detached(
+        myStringUint8, naclKeypair.secretKey);
+      if(signature.length !== 64) {
+        throw new Error('Signature error.');
+      }
     })
     .add('tweetnacl ed25519 verify', () => {
       const verified = nacl.sign.detached.verify(
-        myStringUint8, signature, naclKeypair.publicKey);
+        myStringUint8, signature, publicKey);
       if(!verified) {
         throw new Error('Verification failed.');
       }
     })
     .add('@stablelib/ed25519 ed25519 verify', () => {
       const verified = stableEd25519.verify(
-        naclKeypair.publicKey, myStringUint8, signature);
+        publicKey, myStringUint8, signature);
       if(!verified) {
         throw new Error('Verification failed.');
       }
