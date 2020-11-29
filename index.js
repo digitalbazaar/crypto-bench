@@ -55,7 +55,7 @@ const nodeRsaKeyPair = {
     '-----END RSA PRIVATE KEY-----\n'
 };
 
-const {generateKeyPairSync} = crypto;
+const {generateKeyPairSync, verify} = crypto;
 function nodeGenerateRsaNative() {
   // eslint-disable-next-line no-unused-vars
   const k = generateKeyPairSync('rsa', {
@@ -77,6 +77,10 @@ const privateKey = new Buffer.alloc(sodium.crypto_sign_SECRETKEYBYTES);
 sodium.crypto_sign_keypair(publicKey, privateKey);
 const ed25519PublicKeyUint8 = Uint8Array.from(publicKey);
 // const ed25519PrivateKeyUint8 = Uint8Array.from(privateKey);
+const _publicKeyNode12 = require('./ed25519PublicKeyNode12');
+
+const nodejsEd25519PublicKey = _publicKeyNode12.create(
+  {publicKeyBytes: publicKey});
 
 const nodeDocumentLoader = jsonld.documentLoaders.node();
 jsonld.documentLoader = (url, callback) => {
@@ -217,6 +221,13 @@ async function foo() {
     .add('@stablelib/ed25519 ed25519 verify', () => {
       const verified = stableEd25519.verify(
         publicKey, myStringUint8, signature);
+      if(!verified) {
+        throw new Error('Verification failed.');
+      }
+    })
+    .add('Node.js ed25519 verify', () => {
+      const verified = verify(
+        null, myStringBuffer, nodejsEd25519PublicKey, signature);
       if(!verified) {
         throw new Error('Verification failed.');
       }
