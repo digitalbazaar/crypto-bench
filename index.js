@@ -3,6 +3,7 @@
 const base58 = require('base58-universal');
 const crypto = require('crypto');
 const constants = require('./constants');
+const ed25519Util = require('@digitalbazaar/ed25519-util');
 const forge = require('node-forge');
 const jsonld = require('jsonld');
 const sampleData = require('./sample-data');
@@ -17,6 +18,15 @@ const suite = new Benchmark.Suite();
 const forgeKeypair = rsa.generateKeyPair({bits: 2048, e: 0x10001});
 const naclKeypair = nacl.sign.keyPair();
 const privateKeyBase58 = base58.encode(naclKeypair.secretKey);
+
+const nodejsEd25519PrivateKey = crypto.createPrivateKey({
+  // node is more than happy to create a new private key using a DER
+  key: ed25519Util.privateKeyDerEncode({
+    privateKeyBytes: naclKeypair.secretKey}),
+  format: 'der',
+  type: 'pkcs8'
+});
+const nodejsEd25519PublicKey = crypto.createPublicKey(nodejsEd25519PrivateKey);
 
 const dalekDb = require('./ed25519-dalek-db/index.node');
 
@@ -81,10 +91,6 @@ const privateKey = new Buffer.alloc(sodium.crypto_sign_SECRETKEYBYTES);
 sodium.crypto_sign_keypair(publicKey, privateKey);
 const ed25519PublicKeyUint8 = Uint8Array.from(publicKey);
 // const ed25519PrivateKeyUint8 = Uint8Array.from(privateKey);
-const _publicKeyNode12 = require('./ed25519PublicKeyNode12');
-
-const nodejsEd25519PublicKey = _publicKeyNode12.create(
-  {publicKeyBytes: publicKey});
 
 const nodeDocumentLoader = jsonld.documentLoaders.node();
 jsonld.documentLoader = (url, callback) => {
@@ -201,16 +207,16 @@ async function foo() {
     //     throw new Error('Verification failed.');
     //   }
     // })
-    // .add('tweetnacl ed25519 sign', () => {
-    //   const signature = nacl.sign.detached(
-    //     myStringUint8, naclKeypair.secretKey);
-    //   const result = Buffer.from(signature).toString('base64');
-    //   // console.log('TWEET', result);
-    //   if(signature.length !== 64) {
-    //     throw new Error('Signature error.');
-    //   }
-    //   return result;
-    // })
+    .add('tweetnacl ed25519 sign', () => {
+      const signature = nacl.sign.detached(
+        myStringUint8, naclKeypair.secretKey);
+      const result = Buffer.from(signature).toString('base64');
+      // console.log('TWEET', result);
+      if(signature.length !== 64) {
+        throw new Error('Signature error.');
+      }
+      return result;
+    })
     // .add('tweetnacl ed25519 verify', () => {
     //   const verified = nacl.sign.detached.verify(
     //     myStringUint8, signature, publicKey);
@@ -232,7 +238,16 @@ async function foo() {
     //     throw new Error('Verification failed.');
     //   }
     // })
+    .add('Node.js crypto ed25519 sign', () => {
+      // adding a base58 decode on private key for parity with dalek
+      base58.decode(privateKeyBase58);
+      const result = crypto.sign(null, myStringUint8, nodejsEd25519PrivateKey);
+      const base64 = Buffer.from(result).toString('base64');
+      // console.log('NNNNNNN', base64);
+      return base64;
+    })
     .add('sodium-native ed25519 sign', () => {
+      // uses a different keypair from other implementations
       // adding a base58 decode on private key for parity with dalek
       base58.decode(privateKeyBase58);
       const signature = Buffer.allocUnsafe(sodium.crypto_sign_BYTES);

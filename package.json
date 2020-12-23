@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@digitalbazaar/ed25519-util": "github:digitalbazaar/ed25519-util#initial",
     "@stablelib/ed25519": "^1.0.1",
     "base58-universal": "^1.0.0",
     "benchmark": "^2.1.4",
