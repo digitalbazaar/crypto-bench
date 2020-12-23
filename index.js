@@ -1,5 +1,6 @@
 'use strict';
 
+const base58 = require('base58-universal');
 const crypto = require('crypto');
 const constants = require('./constants');
 const forge = require('node-forge');
@@ -15,6 +16,9 @@ const suite = new Benchmark.Suite();
 
 const forgeKeypair = rsa.generateKeyPair({bits: 2048, e: 0x10001});
 const naclKeypair = nacl.sign.keyPair();
+const privateKeyBase58 = base58.encode(naclKeypair.secretKey);
+
+const dalekDb = require('./ed25519-dalek-db/index.node');
 
 const nodeRsaKeyPair = {
   publicKeyPem: '-----BEGIN PUBLIC KEY-----\n' +
@@ -111,124 +115,178 @@ async function foo() {
   sodium.crypto_sign_detached(signature, myStringBuffer, privateKey);
   const ed25519SignatureUint8 = Uint8Array.from(signature);
 
+  // console.log('JS UINT', myStringUint8);
+  // const uuuu = dalekDb.sign3(privateKeyBase58, myStringUint8);
+  // console.log('DALEK3', uuuu);
+  // const ssss = dalekDb.sign4(privateKeyBase58, myString);
+  // console.log('DALEK4', ssss);
+
   let rsaSignature;
 
   suite
-    .add('Node.js crypto sha1', () => {
-      const md = crypto.createHash('sha1');
-      md.update(myString, 'utf8');
-      return md.digest('hex');
-    })
-    .add('Node.js crypto sha256', () => {
-      const md = crypto.createHash('sha256');
-      md.update(myString, 'utf8');
-      return md.digest('hex');
-    })
-    .add('Node.js crypto 10.x+ blake2b512', () => {
-      const md = crypto.createHash('blake2b512');
-      md.update(myString, 'utf8');
-      const hash = md.digest('base64');
-      return hash;
-    })
-    .add('forge sha256', () => {
-      const md = forge.md.sha256.create();
-      md.update(myString);
-      return md.digest().toHex();
-    })
-    .add('sodium-native blake2 aka generichash', () => {
-      // using 64 byte output for parity with OpenSSL `blake2b512`
-      const output = Buffer.allocUnsafe(64);
-      sodium.crypto_generichash(output, myStringBuffer);
-      return output.toString('base64');
-    })
-    .add('forge RSA 2048 sign', () => {
-      const md = forge.md.sha256.create();
-      const pss = forge.pss.create({
-        md,
-        mgf: forge.mgf.mgf1.create(forge.md.sha256.create()),
-        saltLength: md.digestLength
-      });
-      md.update(myString, 'utf8');
-      rsaSignature = forgeKeypair.privateKey.sign(md, pss);
-      // console.log('Signature', signature);
-    })
-    .add('forge RSA 2048 verify', () => {
-      const md = forge.md.sha256.create();
-      const pss = forge.pss.create({
-        md,
-        mgf: forge.mgf.mgf1.create(forge.md.sha256.create()),
-        saltLength: md.digestLength
-      });
-      md.update(myString, 'utf8');
-      const verified = forgeKeypair.publicKey.verify(
-        md.digest().bytes(), rsaSignature, pss);
-      if(!verified) {
-        throw new Error('Verification failed.');
-      }
-    })
-    .add('Node.js crypto RSA generateKeySync', () => {
-      nodeGenerateRsaNative();
-    })
-    .add('Node.js crypto 2048 sign', () => {
-      const rsaSign = crypto.createSign('RSA-SHA256');
-      rsaSign.update(myString);
-      rsaSignature = rsaSign.sign({
-        key: nodeRsaKeyPair.privateKeyPem,
-        padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
-        saltLength: crypto.constants.RSA_PSS_SALTLEN_DIGEST
-      }, 'base64');
-      // console.log('Signature', signature);
-    })
-    .add('Node.js crypto 2048 verify', () => {
-      const rsaVerify = crypto.createVerify('RSA-SHA256');
-      rsaVerify.update(myString);
-      const verified = rsaVerify.verify({
-        key: nodeRsaKeyPair.publicKeyPem,
-        padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
-        saltLength: crypto.constants.RSA_PSS_SALTLEN_DIGEST
-      }, rsaSignature, 'base64');
-      if(!verified) {
-        throw new Error('Verification failed.');
-      }
-    })
-    .add('tweetnacl ed25519 sign', () => {
-      const signature = nacl.sign.detached(
-        myStringUint8, naclKeypair.secretKey);
-      if(signature.length !== 64) {
-        throw new Error('Signature error.');
-      }
-    })
-    .add('tweetnacl ed25519 verify', () => {
-      const verified = nacl.sign.detached.verify(
-        myStringUint8, signature, publicKey);
-      if(!verified) {
-        throw new Error('Verification failed.');
-      }
-    })
-    .add('@stablelib/ed25519 ed25519 verify', () => {
-      const verified = stableEd25519.verify(
-        publicKey, myStringUint8, signature);
-      if(!verified) {
-        throw new Error('Verification failed.');
-      }
-    })
-    .add('Node.js crypto ed25519 verify', () => {
-      const verified = verify(
-        null, myStringBuffer, nodejsEd25519PublicKey, signature);
-      if(!verified) {
-        throw new Error('Verification failed.');
-      }
-    })
+    // .add('Node.js crypto sha1', () => {
+    //   const md = crypto.createHash('sha1');
+    //   md.update(myString, 'utf8');
+    //   return md.digest('hex');
+    // })
+    // .add('Node.js crypto sha256', () => {
+    //   const md = crypto.createHash('sha256');
+    //   md.update(myString, 'utf8');
+    //   return md.digest('hex');
+    // })
+    // .add('Node.js crypto 10.x+ blake2b512', () => {
+    //   const md = crypto.createHash('blake2b512');
+    //   md.update(myString, 'utf8');
+    //   const hash = md.digest('base64');
+    //   return hash;
+    // })
+    // .add('forge sha256', () => {
+    //   const md = forge.md.sha256.create();
+    //   md.update(myString);
+    //   return md.digest().toHex();
+    // })
+    // .add('sodium-native blake2 aka generichash', () => {
+    //   // using 64 byte output for parity with OpenSSL `blake2b512`
+    //   const output = Buffer.allocUnsafe(64);
+    //   sodium.crypto_generichash(output, myStringBuffer);
+    //   return output.toString('base64');
+    // })
+    // .add('forge RSA 2048 sign', () => {
+    //   const md = forge.md.sha256.create();
+    //   const pss = forge.pss.create({
+    //     md,
+    //     mgf: forge.mgf.mgf1.create(forge.md.sha256.create()),
+    //     saltLength: md.digestLength
+    //   });
+    //   md.update(myString, 'utf8');
+    //   rsaSignature = forgeKeypair.privateKey.sign(md, pss);
+    //   // console.log('Signature', signature);
+    // })
+    // .add('forge RSA 2048 verify', () => {
+    //   const md = forge.md.sha256.create();
+    //   const pss = forge.pss.create({
+    //     md,
+    //     mgf: forge.mgf.mgf1.create(forge.md.sha256.create()),
+    //     saltLength: md.digestLength
+    //   });
+    //   md.update(myString, 'utf8');
+    //   const verified = forgeKeypair.publicKey.verify(
+    //     md.digest().bytes(), rsaSignature, pss);
+    //   if(!verified) {
+    //     throw new Error('Verification failed.');
+    //   }
+    // })
+    // .add('Node.js crypto RSA generateKeySync', () => {
+    //   nodeGenerateRsaNative();
+    // })
+    // .add('Node.js crypto 2048 sign', () => {
+    //   const rsaSign = crypto.createSign('RSA-SHA256');
+    //   rsaSign.update(myString);
+    //   rsaSignature = rsaSign.sign({
+    //     key: nodeRsaKeyPair.privateKeyPem,
+    //     padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+    //     saltLength: crypto.constants.RSA_PSS_SALTLEN_DIGEST
+    //   }, 'base64');
+    //   // console.log('Signature', signature);
+    // })
+    // .add('Node.js crypto 2048 verify', () => {
+    //   const rsaVerify = crypto.createVerify('RSA-SHA256');
+    //   rsaVerify.update(myString);
+    //   const verified = rsaVerify.verify({
+    //     key: nodeRsaKeyPair.publicKeyPem,
+    //     padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+    //     saltLength: crypto.constants.RSA_PSS_SALTLEN_DIGEST
+    //   }, rsaSignature, 'base64');
+    //   if(!verified) {
+    //     throw new Error('Verification failed.');
+    //   }
+    // })
+    // .add('tweetnacl ed25519 sign', () => {
+    //   const signature = nacl.sign.detached(
+    //     myStringUint8, naclKeypair.secretKey);
+    //   const result = Buffer.from(signature).toString('base64');
+    //   // console.log('TWEET', result);
+    //   if(signature.length !== 64) {
+    //     throw new Error('Signature error.');
+    //   }
+    //   return result;
+    // })
+    // .add('tweetnacl ed25519 verify', () => {
+    //   const verified = nacl.sign.detached.verify(
+    //     myStringUint8, signature, publicKey);
+    //   if(!verified) {
+    //     throw new Error('Verification failed.');
+    //   }
+    // })
+    // .add('@stablelib/ed25519 ed25519 verify', () => {
+    //   const verified = stableEd25519.verify(
+    //     publicKey, myStringUint8, signature);
+    //   if(!verified) {
+    //     throw new Error('Verification failed.');
+    //   }
+    // })
+    // .add('Node.js crypto ed25519 verify', () => {
+    //   const verified = verify(
+    //     null, myStringBuffer, nodejsEd25519PublicKey, signature);
+    //   if(!verified) {
+    //     throw new Error('Verification failed.');
+    //   }
+    // })
     .add('sodium-native ed25519 sign', () => {
+      // adding a base58 decode on private key for parity with dalek
+      base58.decode(privateKeyBase58);
       const signature = Buffer.allocUnsafe(sodium.crypto_sign_BYTES);
       sodium.crypto_sign_detached(signature, myStringBuffer, privateKey);
-      return signature.toString('base64');
+      const result = signature.toString('base64');
+      // console.log('SODIUM', result);
+      return result;
     })
-    .add('sodium-native ed25519 verify', () => {
-      const verified = sodium.crypto_sign_verify_detached(
-        Buffer.from(signature, 'base64'), myStringBuffer, publicKey);
-      if(!verified) {
-        throw new Error('Verification failed.');
+    // .add('sodium-native ed25519 verify', () => {
+    //   const verified = sodium.crypto_sign_verify_detached(
+    //     Buffer.from(signature, 'base64'), myStringBuffer, publicKey);
+    //   if(!verified) {
+    //     throw new Error('Verification failed.');
+    //   }
+    // })
+    .add('Dalek DB sign return Uint8Array', () => {
+      try {
+        const signature = dalekDb.sign2(privateKeyBase58, myStringUint8);
+        const result = Buffer.from(signature).toString('base64');
+        return result;
+      } catch(e) {
+        console.log('EEEEEEEEE', e);
+        throw e;
+      }
+    })
+    .add('Dalek DB sign Uint8Array in JS return base64 string', () => {
+      try {
+        const signature = dalekDb.sign3(privateKeyBase58, myStringUint8);
+        // console.log('DALEK3', signature);
+        return signature;
+      } catch(e) {
+        console.log('EEEEEEEEE', e);
+        throw e;
+      }
+    })
+    .add('Dalek sign Uint8Array inc/encoded in JS return base64 string', () => {
+      try {
+        const stringU8 = encoder.encode(myString);
+        const signature = dalekDb.sign3(privateKeyBase58, stringU8);
+        // console.log('DALEK3', signature);
+        return signature;
+      } catch(e) {
+        console.log('EEEEEEEEE', e);
+        throw e;
+      }
+    })
+    .add('Dalek DB sign message string return base64 string', () => {
+      try {
+        const signature = dalekDb.sign4(privateKeyBase58, myString);
+        // console.log('DALEK4', signature);
+        return signature;
+      } catch(e) {
+        console.log('EEEEEEEEE', e);
+        throw e;
       }
     })
     .on('cycle', event => {
