@@ -22,6 +22,7 @@ const publicKey = new Buffer.alloc(sodium.crypto_sign_PUBLICKEYBYTES);
 const privateKey = new Buffer.alloc(sodium.crypto_sign_SECRETKEYBYTES);
 sodium.crypto_sign_keypair(publicKey, privateKey);
 const privateKeyBase58 = base58.encode(privateKey);
+const ed25519PrivateKeyUint8 = Uint8Array.from(privateKey);
 const ed25519PublicKeyUint8 = Uint8Array.from(publicKey);
 const ed25519PublicKeyBase58 = base58.encode(ed25519PublicKeyUint8);
 
@@ -224,27 +225,22 @@ async function foo() {
       }
     })
     .add('Node.js crypto ed25519 verify', () => {
-      try {
-        const verified = verify(
-          null, myStringBuffer, nodejsEd25519PublicKey, signature);
-        if(!verified) {
-          throw new Error('Verification failed.');
-        }
-      } catch(e) {
-        console.log('EEEEEEEEE', e);
-        throw e;
-      }
-    })
-    .add('sodium-native ed25519 verify', () => {
-      const verified = sodium.crypto_sign_verify_detached(
-        Buffer.from(signature, 'base64'), myStringBuffer, publicKey);
+      const verified = verify(
+        null, myStringBuffer, nodejsEd25519PublicKey, signature);
       if(!verified) {
         throw new Error('Verification failed.');
       }
     })
     .add('Dalek ed25519 verify', () => {
       const verified = dalekDb.verify(
-        ed25519PublicKeyBase58, ed25519SignaturBase64, myStringUint8);
+        myStringUint8, ed25519PublicKeyUint8, ed25519SignatureUint8);
+      if(!verified) {
+        throw new Error('Verification failed.');
+      }
+    })
+    .add('sodium-native ed25519 verify', () => {
+      const verified = sodium.crypto_sign_verify_detached(
+        Buffer.from(signature, 'base64'), myStringBuffer, publicKey);
       if(!verified) {
         throw new Error('Verification failed.');
       }
@@ -260,12 +256,21 @@ async function foo() {
       return result;
     })
     .add('Node.js crypto ed25519 sign', () => {
-      // adding a base58 decode on private key for parity with dalek
-      base58.decode(privateKeyBase58);
       const result = crypto.sign(null, myStringUint8, nodejsEd25519PrivateKey);
       const base64 = Buffer.from(result).toString('base64');
       // console.log('NODEJS', base64);
       return base64;
+    })
+    .add('Dalek DB sign return Uint8Array', () => {
+      try {
+        const signature = dalekDb.sign(ed25519PrivateKeyUint8, myStringUint8);
+        const result = Buffer.from(signature).toString('base64');
+        // console.log('DALEK', result);
+        return result;
+      } catch(e) {
+        console.log('EEEEEEEEE', e);
+        throw e;
+      }
     })
     .add('sodium-native ed25519 sign', () => {
       // adding a base58 decode on private key for parity with dalek
@@ -275,47 +280,6 @@ async function foo() {
       const result = signature.toString('base64');
       // console.log('SODIUM', result);
       return result;
-    })
-    .add('Dalek DB sign return Uint8Array', () => {
-      try {
-        const signature = dalekDb.sign2(privateKeyBase58, myStringUint8);
-        const result = Buffer.from(signature).toString('base64');
-        return result;
-      } catch(e) {
-        console.log('EEEEEEEEE', e);
-        throw e;
-      }
-    })
-    .add('Dalek DB sign Uint8Array in JS return base64 string', () => {
-      try {
-        const signature = dalekDb.sign3(privateKeyBase58, myStringUint8);
-        // console.log('DALEK3', signature);
-        return signature;
-      } catch(e) {
-        console.log('EEEEEEEEE', e);
-        throw e;
-      }
-    })
-    .add('Dalek sign Uint8Array inc/encoded in JS return base64 string', () => {
-      try {
-        const stringU8 = encoder.encode(myString);
-        const signature = dalekDb.sign3(privateKeyBase58, stringU8);
-        // console.log('DALEK3', signature);
-        return signature;
-      } catch(e) {
-        console.log('EEEEEEEEE', e);
-        throw e;
-      }
-    })
-    .add('Dalek DB sign message string return base64 string', () => {
-      try {
-        const signature = dalekDb.sign4(privateKeyBase58, myString);
-        // console.log('DALEK4', signature);
-        return signature;
-      } catch(e) {
-        console.log('EEEEEEEEE', e);
-        throw e;
-      }
     })
     .on('cycle', event => {
       console.log(String(event.target));
