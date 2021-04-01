@@ -205,6 +205,13 @@ async function foo() {
         throw new Error('Verification failed.');
       }
     })
+    .add('@stablelib/ed25519 ed25519 sign', () => {
+      const signature = stableEd25519.sign(
+        privateKey, myStringUint8);
+      if(signature.length !== 64) {
+        throw new Error('Signature error.');
+      }
+    })
     .add('@stablelib/ed25519 ed25519 verify', () => {
       const verified = stableEd25519.verify(
         publicKey, myStringUint8, signature);
