@@ -55,7 +55,7 @@ const nodeRsaKeyPair = {
     '-----END RSA PRIVATE KEY-----\n'
 };
 
-const {generateKeyPairSync, verify} = crypto;
+const {createPrivateKey, generateKeyPairSync, sign, verify} = crypto;
 function nodeGenerateRsaNative() {
   // eslint-disable-next-line no-unused-vars
   const k = generateKeyPairSync('rsa', {
@@ -76,9 +76,17 @@ const publicKey = new Buffer.alloc(sodium.crypto_sign_PUBLICKEYBYTES);
 const privateKey = new Buffer.alloc(sodium.crypto_sign_SECRETKEYBYTES);
 sodium.crypto_sign_keypair(publicKey, privateKey);
 const ed25519PublicKeyUint8 = Uint8Array.from(publicKey);
-// const ed25519PrivateKeyUint8 = Uint8Array.from(privateKey);
+//const ed25519PrivateKeyUint8 = Uint8Array.from(privateKey);
 const _publicKeyNode12 = require('./ed25519PublicKeyNode12');
 
+const DER_PRIVATE_KEY_PREFIX = Buffer.from(
+  '302e020100300506032b657004220420', 'hex');
+
+const nodejsEd25519PrivateKey = createPrivateKey({
+  key: Buffer.concat([DER_PRIVATE_KEY_PREFIX, privateKey.slice(0, 32)]),
+  format: 'der',
+  type: 'pkcs8'
+});
 const nodejsEd25519PublicKey = _publicKeyNode12.create(
   {publicKeyBytes: publicKey});
 
@@ -217,6 +225,13 @@ async function foo() {
         publicKey, myStringUint8, signature);
       if(!verified) {
         throw new Error('Verification failed.');
+      }
+    })
+    .add('Node.js crypto ed25519 sign', () => {
+      const signature = sign(
+        null, myStringUint8, nodejsEd25519PrivateKey);
+      if(signature.length !== 64) {
+        throw new Error('Signature error.');
       }
     })
     .add('Node.js crypto ed25519 verify', () => {
