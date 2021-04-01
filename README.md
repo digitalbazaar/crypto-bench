@@ -1,23 +1,27 @@
 # crypto-bench
 
-### Node.js 14..15.1 AMD Ryzen 5 3600 with `sha_ni` capability
+### Node.js 14.16.0 AMD Ryzen 5 3600 with `sha_ni` capability
 ```
-Node.js crypto sha1 x 64,686 ops/sec ±1.15% (95 runs sampled)
-Node.js crypto sha256 x 60,490 ops/sec ±1.80% (93 runs sampled)
-Node.js crypto 10.x+ blake2b512 x 33,559 ops/sec ±0.33% (98 runs sampled)
-forge sha256 x 1,931 ops/sec ±8.23% (68 runs sampled)
-sodium-native blake2 aka generichash x 40,047 ops/sec ±0.24% (96 runs sampled)
-forge RSA 2048 sign x 48.10 ops/sec ±1.43% (64 runs sampled)
-forge RSA 2048 verify x 869 ops/sec ±0.27% (95 runs sampled)
-Node.js crypto RSA generateKeySync x 15.82 ops/sec ±15.97% (29 runs sampled)
-Node.js crypto 2048 sign x 1,128 ops/sec ±0.27% (97 runs sampled)
-Node.js crypto 2048 verify x 20,992 ops/sec ±0.67% (92 runs sampled)
-tweetnacl ed25519 sign x 185 ops/sec ±3.91% (59 runs sampled)
-tweetnacl ed25519 verify x 87.82 ops/sec ±4.02% (57 runs sampled)
-@stablelib/ed25519 ed25519 verify x 89.19 ops/sec ±3.92% (44 runs sampled)
-Node.js crypto ed25519 verify x 7,719 ops/sec ±0.20% (97 runs sampled)
-sodium-native ed25519 sign x 7,654 ops/sec ±0.60% (97 runs sampled)
-sodium-native ed25519 verify x 9,164 ops/sec ±0.37% (96 runs sampled)
+Node.js crypto sha1 x 68,168 ops/sec ±1.11% (91 runs sampled)
+Node.js crypto sha256 x 64,057 ops/sec ±1.28% (94 runs sampled)
+Node.js crypto 10.x+ blake2b512 x 34,275 ops/sec ±1.23% (98 runs sampled)
+forge sha256 x 1,953 ops/sec ±8.30% (68 runs sampled)
+sodium-native blake2 aka generichash x 40,502 ops/sec ±0.19% (96 runs sampled)
+forge RSA 2048 sign x 49.76 ops/sec ±1.20% (66 runs sampled)
+forge RSA 2048 verify x 872 ops/sec ±0.52% (96 runs sampled)
+Node.js crypto RSA generateKeySync x 17.64 ops/sec ±16.77% (22 runs sampled)
+Node.js crypto 2048 sign x 1,162 ops/sec ±0.11% (98 runs sampled)
+Node.js crypto 2048 verify x 21,501 ops/sec ±0.51% (95 runs sampled)
+tweetnacl ed25519 sign x 215 ops/sec ±4.42% (61 runs sampled)
+tweetnacl ed25519 verify x 97.65 ops/sec ±4.77% (56 runs sampled)
+@stablelib/ed25519 ed25519 sign x 219 ops/sec ±4.35% (60 runs sampled)
+@stablelib/ed25519 ed25519 verify x 98.90 ops/sec ±4.52% (56 runs sampled)
+noble-ed25519 ed25519 sign x 1,701 ops/sec ±0.81% (86 runs sampled)
+noble-ed25519 ed25519 verify x 382 ops/sec ±0.95% (85 runs sampled)
+Node.js crypto ed25519 sign x 10,451 ops/sec ±0.12% (98 runs sampled)
+Node.js crypto ed25519 verify x 7,620 ops/sec ±0.09% (97 runs sampled)
+sodium-native ed25519 sign x 7,705 ops/sec ±0.19% (96 runs sampled)
+sodium-native ed25519 verify x 9,054 ops/sec ±0.11% (96 runs sampled)
 ```
 
 ### Node.js 11.3.0 Intel(R) Core(TM) i7-3610QM CPU @ 2.30GHz
