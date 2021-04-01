@@ -6,6 +6,7 @@ const forge = require('node-forge');
 const jsonld = require('jsonld');
 const sampleData = require('./sample-data');
 const nacl = require('tweetnacl');
+const nobleEd25519 = require('noble-ed25519');
 const {rsa} = forge.pki;
 const sodium = require('sodium-native');
 const Benchmark = require('benchmark');
@@ -227,6 +228,30 @@ async function foo() {
         throw new Error('Verification failed.');
       }
     })
+    .add('noble-ed25519 ed25519 sign', async (deferred) => {
+      try {
+        const signature = await nobleEd25519.sign(
+          myStringUint8, privateKey.slice(0, 32));
+        if(signature.length !== 64) {
+          throw new Error('Signature error.');
+        }
+        deferred.resolve();
+      } catch(e) {
+        deferred.reject(e);
+      }
+    }, {defer: true})
+    .add('noble-ed25519 ed25519 verify', async (deferred) => {
+      try {
+        const verified = await nobleEd25519.verify(
+          signature, myStringUint8, publicKey);
+        if(!verified) {
+          throw new Error('Verification failed.');
+        }
+        deferred.resolve();
+      } catch(e) {
+        deferred.reject(e);
+      }
+    }, {defer: true})
     .add('Node.js crypto ed25519 sign', () => {
       const signature = sign(
         null, myStringUint8, nodejsEd25519PrivateKey);
