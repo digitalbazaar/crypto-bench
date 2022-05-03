@@ -10,10 +10,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@noble/ed25519": "^1.6.0",
     "@stablelib/ed25519": "^1.0.1",
     "benchmark": "^2.1.4",
     "jsonld": "^1.6.1",
-    "noble-ed25519": "^1.0.4",
     "node-forge": "^0.10.0",
     "sodium-native": "^3.2.0",
     "tweetnacl": "^1.0.0"
