@@ -2,6 +2,7 @@
 
 const crypto = require('crypto');
 const constants = require('./constants');
+const ed2curve = require('ed2curve');
 const forge = require('node-forge');
 const jsonld = require('jsonld');
 const sampleData = require('./sample-data');
@@ -77,8 +78,11 @@ const publicKey = new Buffer.alloc(sodium.crypto_sign_PUBLICKEYBYTES);
 const privateKey = new Buffer.alloc(sodium.crypto_sign_SECRETKEYBYTES);
 sodium.crypto_sign_keypair(publicKey, privateKey);
 const ed25519PublicKeyUint8 = Uint8Array.from(publicKey);
-//const ed25519PrivateKeyUint8 = Uint8Array.from(privateKey);
+const ed25519PrivateKeyUint8 = Uint8Array.from(privateKey);
 const _publicKeyNode12 = require('./ed25519PublicKeyNode12');
+
+const x25519PrivateKey = ed2curve.convertSecretKey(privateKey);
+const x25519PublicKey = nobleEd25519.Point.fromHex(publicKey).toX25519();
 
 const DER_PRIVATE_KEY_PREFIX = Buffer.from(
   '302e020100300506032b657004220420', 'hex');
@@ -118,7 +122,7 @@ async function foo() {
 
   const signature = Buffer.alloc(sodium.crypto_sign_BYTES);
   sodium.crypto_sign_detached(signature, myStringBuffer, privateKey);
-  const ed25519SignatureUint8 = Uint8Array.from(signature);
+  //const ed25519SignatureUint8 = Uint8Array.from(signature);
 
   let rsaSignature;
 
@@ -277,6 +281,30 @@ async function foo() {
       if(!verified) {
         throw new Error('Verification failed.');
       }
+    })
+    .add('ed2curve ed25519 pub key => x25519 pub key', () => {
+      ed2curve.convertPublicKey(ed25519PublicKeyUint8);
+    })
+    .add('noble-ed25519 ed25519 pub key => x25519 pub key', () => {
+      nobleEd25519.Point.fromHex(publicKey).toX25519();
+    })
+    .add('ed2curve ed25519 pri key => x25519 pri key', () => {
+      ed2curve.convertSecretKey(ed25519PrivateKeyUint8);
+    })
+    .add('noble-ed25519 ed25519 pri key => x25519 pri key', async deferred => {
+      try {
+        await nobleEd25519.utils.getExtendedPublicKey(
+          ed25519PrivateKeyUint8.slice(0, 32));
+        deferred.resolve();
+      } catch(e) {
+        deferred.reject(e);
+      }
+    }, {defer: true})
+    .add('tweetnacl x25519 derive secret', () => {
+      nacl.scalarMult(x25519PrivateKey, x25519PublicKey);
+    })
+    .add('noble-ed25519 x25519 derive secret', () => {
+      nobleEd25519.curve25519.scalarMult(x25519PrivateKey, x25519PublicKey);
     })
     .on('cycle', event => {
       console.log(String(event.target));
