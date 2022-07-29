@@ -12,6 +12,7 @@ const {rsa} = forge.pki;
 const sodium = require('sodium-native');
 const Benchmark = require('benchmark');
 const stableEd25519 = require('@stablelib/ed25519');
+const util = require('./util.js');
 
 const suite = new Benchmark.Suite();
 
@@ -107,6 +108,12 @@ jsonld.documentLoader = (url, callback) => {
   }
   nodeDocumentLoader(url, callback);
 };
+
+const XCHACHA20_POLY1305_CEK = crypto.randomBytes(32);
+const XCHACHA20_POLY1305_IV = crypto.randomBytes(24);
+const XCHACHA20_POLY1305_DATA = new Uint8Array(1024 * 1024);
+const XCHACHA20_POLY1305_AAD = new Uint8Array(128);
+const XCHACHA20_POLY1305_TAG = new Uint8Array(16);
 
 async function foo() {
   const doc = await jsonld.canonize(sampleData, {
@@ -306,6 +313,65 @@ async function foo() {
     .add('noble-ed25519 x25519 derive secret', () => {
       nobleEd25519.curve25519.scalarMult(x25519PrivateKey, x25519PublicKey);
     })
+    .add('Node.js XChaCha20Poly1305 encrypt', async deferred => {
+      await util.encryptNodeXChaCha20Poly1305({
+        data: XCHACHA20_POLY1305_DATA,
+        additionalData: XCHACHA20_POLY1305_AAD,
+        cek: XCHACHA20_POLY1305_CEK,
+        iv: XCHACHA20_POLY1305_IV
+      });
+      deferred.resolve();
+    }, {defer: true})
+    .add('Node.js XChaCha20Poly1305 decrypt', async deferred => {
+      await util.decryptNodeXChaCha20Poly1305({
+        ciphertext: XCHACHA20_POLY1305_DATA,
+        additionalData: XCHACHA20_POLY1305_AAD,
+        cek: XCHACHA20_POLY1305_CEK,
+        iv: XCHACHA20_POLY1305_IV,
+        tag: XCHACHA20_POLY1305_TAG
+      });
+      deferred.resolve();
+    }, {defer: true})
+    .add('Node.js XChaCha20Poly1305 encrypt w/stablelib subkey',
+      async deferred => {
+        await util.encryptNodeXChaCha20Poly1305_StableLibChaCha20({
+          data: XCHACHA20_POLY1305_DATA,
+          additionalData: XCHACHA20_POLY1305_AAD,
+          cek: XCHACHA20_POLY1305_CEK,
+          iv: XCHACHA20_POLY1305_IV
+        });
+        deferred.resolve();
+      }, {defer: true})
+    .add('Node.js XChaCha20Poly1305 decrypt w/stablelib subkey',
+      async deferred => {
+        await util.decryptNodeXChaCha20Poly1305_StableLibChaCha20({
+          ciphertext: XCHACHA20_POLY1305_DATA,
+          additionalData: XCHACHA20_POLY1305_AAD,
+          cek: XCHACHA20_POLY1305_CEK,
+          iv: XCHACHA20_POLY1305_IV,
+          tag: XCHACHA20_POLY1305_TAG
+        });
+        deferred.resolve();
+      }, {defer: true})
+    .add('stablelib XChaCha20Poly1305 encrypt', async deferred => {
+      await util.encryptStableLibXChaCha20Poly1305({
+        data: XCHACHA20_POLY1305_DATA,
+        additionalData: XCHACHA20_POLY1305_AAD,
+        cek: XCHACHA20_POLY1305_CEK,
+        iv: XCHACHA20_POLY1305_IV
+      });
+      deferred.resolve();
+    }, {defer: true})
+    .add('stablelib XChaCha20Poly1305 decrypt', async deferred => {
+      await util.decryptStableLibXChaCha20Poly1305({
+        ciphertext: XCHACHA20_POLY1305_DATA,
+        additionalData: XCHACHA20_POLY1305_AAD,
+        cek: XCHACHA20_POLY1305_CEK,
+        iv: XCHACHA20_POLY1305_IV,
+        tag: XCHACHA20_POLY1305_TAG
+      });
+      deferred.resolve();
+    }, {defer: true})
     .on('cycle', event => {
       console.log(String(event.target));
     })

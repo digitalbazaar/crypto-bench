@@ -1,8 +1,21 @@
-/*
- * Copyright (c) 2018-2020 Digital Bazaar, Inc. All rights reserved.
+/*!
+ * Copyright (c) 2018-2022 Digital Bazaar, Inc. All rights reserved.
  */
 const {asn1, oids, util} = require('node-forge');
 const {ByteBuffer} = util;
+const {ChaCha20Poly1305} = require('@stablelib/chacha20poly1305');
+const crypto = require('crypto');
+const {streamXOR} = require('@stablelib/chacha');
+
+// constants are based on the string: "expand 32-byte k"
+const CHACHA20_CONSTANTS = [
+  0x61707865, // "expa" referred to as the "sigma" constant
+  0x3320646E, // "nd 3" keys used here must be 32-bytes
+  0x79622D32, // "2-by"
+  0x6B206574, // "te k"
+];
+const LE = true;
+const NULL_DATA = new Uint8Array(64);
 
 /**
  * Wraps Base58 decoding operations in
@@ -126,3 +139,195 @@ module.exports.publicKeyDerEncode = ({publicKeyBytes}) => {
   const publicKeyDer = asn1.toDer(a);
   return Buffer.from(publicKeyDer.getBytes(), 'binary');
 };
+
+// node.js xchacha20poly1305 w/node.js chacha20 subkey generation
+module.exports.encryptNodeXChaCha20Poly1305 = async ({
+  data, additionalData, cek, iv
+}) => {
+  const {subkey, iv: newIV} = await _generateSubkey({
+    cek, nonce: iv, chacha20: _nodeChaCha20
+  });
+
+  const cipher = crypto.createCipheriv(
+    'chacha20-poly1305', subkey, newIV, {authTagLength: 16});
+  if(additionalData) {
+    cipher.setAAD(additionalData);
+  }
+  const encrypted = cipher.update(data);
+  const final = cipher.final();
+  const ciphertext = final.length > 0 ?
+    Buffer.concat([encrypted, final]) : encrypted;
+  const tag = cipher.getAuthTag();
+  return {ciphertext, iv, tag};
+};
+
+// node.js xchacha20poly1305 w/node.js chacha20 subkey generation
+module.exports.decryptNodeXChaCha20Poly1305 = async ({
+  ciphertext, iv, tag, additionalData, cek
+}) => {
+  const {subkey, iv: newIV} = await _generateSubkey({
+    cek, nonce: iv, chacha20: _nodeChaCha20
+  });
+
+  const decipher = crypto.createDecipheriv(
+    'chacha20-poly1305', subkey, newIV, {authTagLength: 16});
+  decipher.setAuthTag(tag);
+  if(additionalData) {
+    decipher.setAAD(additionalData);
+  }
+  decipher.update(ciphertext);
+  try {
+    decipher.final();
+  } catch(e) {
+    // ignore tag error
+  }
+};
+
+// node.js xchacha20poly1305 w/stable lib chacha20 subkey generation
+module.exports.encryptNodeXChaCha20Poly1305_StableLibChaCha20 = async ({
+  data, additionalData, cek, iv
+}) => {
+  const {subkey, iv: newIV} = await _generateSubkey({
+    cek, nonce: iv, chacha20: _stableLibChaCha20
+  });
+
+  const cipher = crypto.createCipheriv(
+    'chacha20-poly1305', subkey, newIV, {authTagLength: 16});
+  if(additionalData) {
+    cipher.setAAD(additionalData);
+  }
+  const encrypted = cipher.update(data);
+  const final = cipher.final();
+  const ciphertext = final.length > 0 ?
+    Buffer.concat([encrypted, final]) : encrypted;
+  const tag = cipher.getAuthTag();
+  return {ciphertext, iv, tag};
+};
+
+// node.js xchacha20poly1305 w/stable lib chacha20 subkey generation
+module.exports.decryptNodeXChaCha20Poly1305_StableLibChaCha20 = async ({
+  ciphertext, iv, tag, additionalData, cek
+}) => {
+  const {subkey, iv: newIV} = await _generateSubkey({
+    cek, nonce: iv, chacha20: _stableLibChaCha20
+  });
+
+  const decipher = crypto.createDecipheriv(
+    'chacha20-poly1305', subkey, newIV, {authTagLength: 16});
+  decipher.setAuthTag(tag);
+  if(additionalData) {
+    decipher.setAAD(additionalData);
+  }
+  decipher.update(ciphertext);
+  try {
+    decipher.final();
+  } catch(e) {
+    // ignore tag error
+  }
+};
+
+module.exports.encryptStableLibXChaCha20Poly1305 = async ({
+  data, additionalData, cek, iv
+} = {}) => {
+  const {subkey, iv: newIV} = await _generateSubkey({
+    cek, nonce: iv, chacha20: _stableLibChaCha20
+  });
+  const cipher = new ChaCha20Poly1305(subkey);
+
+  // encrypt data
+  const encrypted = cipher.seal(newIV, data, additionalData);
+
+  // split ciphertext and tag and return values
+  const ciphertext = encrypted.subarray(0, encrypted.length - cipher.tagLength);
+  const tag = encrypted.subarray(encrypted.length - cipher.tagLength);
+  return {ciphertext, iv, tag};
+};
+
+module.exports.decryptStableLibXChaCha20Poly1305 = async ({
+  ciphertext, iv, tag, additionalData, cek
+}) => {
+  const {subkey, iv: newIV} = await _generateSubkey({
+    cek, nonce: iv, chacha20: _stableLibChaCha20
+  });
+  const cipher = new ChaCha20Poly1305(subkey);
+  const encrypted = new Uint8Array(ciphertext.length + cipher.tagLength);
+  encrypted.set(ciphertext);
+  encrypted.set(tag, ciphertext.length);
+  try {
+    await cipher.open(newIV, encrypted, additionalData);
+  } catch(e) {
+    // ignore tag error
+  }
+};
+
+// internal function for XChaCha20Poly1305 subkey generation
+function _nodeChaCha20({key, nonce, src}) {
+  const cipher = crypto.createCipheriv('chacha20', key, nonce);
+  const dst = cipher.update(src);
+  const final = cipher.final();
+  return final.length > 0 ? Buffer.concat([dst, final]) : dst;
+}
+
+// internal function for XChaCha20Poly1305 subkey generation
+function _stableLibChaCha20({key, nonce, src}) {
+  const dst = new Uint8Array(64);
+
+  // encrypt a single block (1 == full nonce will be used no counter
+  // generated)
+  try {
+    // `nonce` is modified internally, so copy it first
+    nonce = Uint8Array.prototype.slice.call(nonce);
+    return streamXOR(key, nonce, src, dst, 1);
+  } catch(e) {
+    // ignore counter overflow error; we don't use the counter
+    if(e.message.includes('counter overflow')) {
+      return dst;
+    }
+    throw e;
+  }
+}
+
+async function _generateSubkey({cek, nonce, chacha20}) {
+  // generate subkey and 12-byte IV for ChaCha20Poly1305; first 4 bytes of
+  // IV are NULL bytes, last 8 are the last 8 bytes of the randomly generated
+  // 24-byte XChaCha20Poly1305 nonce
+  const subkey = await _hchacha20({
+    key: cek, nonce: nonce.subarray(0, 16), chacha20
+  });
+  const iv = new Uint8Array(12);
+  iv.set(nonce.subarray(16), 4);
+  return {subkey, iv};
+}
+
+async function _hchacha20({key, nonce, chacha20}) {
+  const state = new Array(16);
+  for(let i = 0; i < 4; ++i) {
+    state[i] = CHACHA20_CONSTANTS[i];
+  }
+  const dvKey = new DataView(key.buffer, key.byteOffset, key.length);
+  for(let i = 0; i < 8; ++i) {
+    state[i + 4] = dvKey.getUint32(i * 4, LE);
+  }
+  const dvNonce = new DataView(nonce.buffer, nonce.byteOffset, nonce.length);
+  for(let i = 0; i < 4; ++i) {
+    state[i + 12] = dvNonce.getUint32(i * 4, LE);
+  }
+
+  // run ChaCha20
+  const dst = new Uint8Array(64);
+  await chacha20({key, nonce, src: NULL_DATA, dst});
+
+  // generate HChaCha20 output
+  const out = new Uint8Array(32);
+  const dvOut = new DataView(out.buffer, out.byteOffset, out.length);
+  const dvDst = new DataView(dst.buffer, dst.byteOffset, dst.length);
+  for(let i = 0; i < 4; ++i) {
+    dvOut.setUint32(i * 4, (state[i] - dvDst.getUint32(i * 4, LE)) | 0);
+  }
+  for(let i = 0; i < 4; ++i) {
+    dvOut.setUint32(
+      i * 4 + 16, (state[i + 12] - dvDst.getUint32(i * 4 + 48, LE)) | 0);
+  }
+
+  return out;
+}
