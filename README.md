@@ -1,5 +1,42 @@
 # crypto-bench
 
+### Node.js 20.12.0 AMD Ryzen 5 3600 with `sha_ni` capability 20240327
+```
+Node.js crypto sha1 x 67,508 ops/sec ±0.78% (97 runs sampled)
+Node.js crypto sha256 x 63,241 ops/sec ±1.34% (94 runs sampled)
+Node.js 20.12.0+ crypto.hash sha256 x 65,912 ops/sec ±0.36% (98 runs sampled)
+Node.js crypto 10.x+ blake2b512 x 34,059 ops/sec ±0.79% (95 runs sampled)
+forge sha256 x 1,564 ops/sec ±4.05% (57 runs sampled)
+sodium-native blake2 aka generichash x 39,613 ops/sec ±0.54% (97 runs sampled)
+forge RSA 2048 sign x 37.30 ops/sec ±1.50% (66 runs sampled)
+forge RSA 2048 verify x 799 ops/sec ±0.79% (94 runs sampled)
+Node.js crypto RSA generateKeySync x 5.84 ops/sec ±28.78% (20 runs sampled)
+Node.js crypto 2048 sign x 804 ops/sec ±0.54% (97 runs sampled)
+Node.js crypto 2048 verify x 6,227 ops/sec ±1.32% (97 runs sampled)
+tweetnacl ed25519 sign x 220 ops/sec ±3.75% (70 runs sampled)
+tweetnacl ed25519 verify x 95.84 ops/sec ±3.97% (46 runs sampled)
+@stablelib/ed25519 ed25519 sign x 201 ops/sec ±3.89% (65 runs sampled)
+@stablelib/ed25519 ed25519 verify x 104 ops/sec ±5.46% (58 runs sampled)
+noble-ed25519 ed25519 sign x 899 ops/sec ±118.39% (82 runs sampled)
+noble-ed25519 ed25519 verify x 573 ops/sec ±1.12% (83 runs sampled)
+Node.js crypto ed25519 sign x 10,029 ops/sec ±1.07% (96 runs sampled)
+Node.js crypto ed25519 verify x 7,512 ops/sec ±0.39% (97 runs sampled)
+sodium-native ed25519 sign x 7,674 ops/sec ±0.44% (99 runs sampled)
+sodium-native ed25519 verify x 9,178 ops/sec ±0.44% (96 runs sampled)
+ed2curve ed25519 pub key => x25519 pub key x 612 ops/sec ±4.57% (72 runs sampled)
+noble-ed25519 ed25519 pub key => x25519 pub key x 6,606 ops/sec ±0.77% (97 runs sampled)
+ed2curve ed25519 pri key => x25519 pri key x 289,794 ops/sec ±0.92% (97 runs sampled)
+noble-ed25519 ed25519 pri key => x25519 pri key x 5,853 ops/sec ±1.14% (85 runs sampled)
+tweetnacl x25519 derive secret x 1,674 ops/sec ±0.31% (99 runs sampled)
+noble-ed25519 x25519 derive secret x 937 ops/sec ±0.72% (97 runs sampled)
+Node.js XChaCha20Poly1305 encrypt x 1,652 ops/sec ±2.38% (79 runs sampled)
+Node.js XChaCha20Poly1305 decrypt x 1,442 ops/sec ±1.47% (84 runs sampled)
+Node.js XChaCha20Poly1305 encrypt w/stablelib subkey x 1,721 ops/sec ±1.29% (83 runs sampled)
+Node.js XChaCha20Poly1305 decrypt w/stablelib subkey x 1,533 ops/sec ±1.21% (85 runs sampled)
+stablelib XChaCha20Poly1305 encrypt x 112 ops/sec ±1.70% (77 runs sampled)
+stablelib XChaCha20Poly1305 decrypt x 302 ops/sec ±1.35% (84 runs sampled)
+```
+
 ### Node.js v16.16.0 Intel(R) Core(TM) i7-4710MQ CPU @ 2.50GHz
 ```
 Node.js crypto sha1 x 27,297 ops/sec ±0.82% (91 runs sampled)
