@@ -144,6 +144,14 @@ async function foo() {
       md.update(myString, 'utf8');
       return md.digest('hex');
     })
+    .add('Node.js 20.12.0+ crypto.hash sha256', () => {
+      if(!crypto.hash) {
+        const e = new Error('`crypto.hash` requires Node.js 20.12.0+.');
+        console.error(e);
+        throw e;
+      }
+      crypto.hash('sha256', myString);
+    })
     .add('Node.js crypto 10.x+ blake2b512', () => {
       const md = crypto.createHash('blake2b512');
       md.update(myString, 'utf8');
